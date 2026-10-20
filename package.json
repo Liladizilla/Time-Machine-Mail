@@ -10,9 +10,10 @@
     "lint": "eslint .",
     "test": "node --test",
     "desktop:dev": "concurrently -k -s first \"npm:dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
-    "desktop:dist": "npm run build && electron-builder --publish never --linux AppImage deb",
-    "desktop:dist:win": "npm run build && electron-builder --publish never --win nsis",
-    "desktop:dist:mac": "npm run build && electron-builder --publish never --mac dmg"
+    "desktop:dist": "npm run build && npm run desktop:prepare && electron-builder --publish never --linux AppImage deb",
+    "desktop:dist:win": "npm run build && npm run desktop:prepare && electron-builder --publish never --win nsis",
+    "desktop:dist:mac": "npm run build && npm run desktop:prepare && electron-builder --publish never --mac dmg",
+    "desktop:prepare": "npm install --omit=dev --no-audit --no-fund --prefix .next/standalone && node -e \"require.resolve('next', { paths: [require('path').resolve('.next/standalone')] })\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
