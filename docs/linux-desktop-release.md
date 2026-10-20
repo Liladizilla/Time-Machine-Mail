@@ -1,13 +1,13 @@
 # Linux desktop release checks
 
-The Linux desktop release workflow builds the AppImage and Debian package independently of the Windows and macOS jobs. This keeps a slow cross-platform build from blocking a Linux hotfix.
+The Linux desktop release workflow builds the AppImage and Debian package independently of the Windows and macOS jobs. This keeps a slow cross-platform build from blocking a Linux hotfix. The v0.1.2 build uses the ESLint 9-compatible dependency set and installs the React Hooks lint plugin; CI must pass before release builds are allowed.
 
 Before publishing, CI extracts the AppImage and checks that:
 - `resources/app/server.js` exists.
 - `resources/app/node_modules/next/package.json` exists.
 - Node.js can resolve the packaged `next` runtime from the app directory.
 
-These checks validate the package contents and module resolution. They do not replace launching the AppImage on a real desktop session.
+These checks validate the package contents and module resolution. They do not replace launching the AppImage on a real desktop session. The browser preview is at https://time-machine-mail-preview.vercel.app/; deployment protection may require a temporary share link.
 
 ## Fedora smoke test
 
