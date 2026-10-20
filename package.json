@@ -16,7 +16,7 @@
     "desktop:prepare": "npm install --omit=dev --no-audit --no-fund --prefix .next/standalone && node -e \"const p=require('path').resolve('.next/standalone'); const fs=require('fs'); if(!fs.existsSync(require('path').join(p,'server.js'))) throw Error('Next standalone server.js is missing'); if(!fs.existsSync(require('path').join(p,'node_modules/next/package.json'))) throw Error('Next runtime package is missing from standalone node_modules'); require.resolve('next', { paths: [p] }); console.log('Verified standalone Next.js runtime:', require.resolve('next', { paths: [p] }));\""
   },
   "dependencies": {
-    "@supabase/ssr": "^0.7.0",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.57.0",
     "lucide-react": "^1.59.0",
     "next": "^15.5.0",
