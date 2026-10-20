@@ -75,3 +75,15 @@ test('stale timeline responses cannot overwrite the active account or sort order
   assert.match(authListener, /timelineRequestSequence\.current \+= 1/);
   assert.match(authListener, /if \(next\) \{[\s\S]*?setMessages\(\[\]\)/);
 });
+
+test('status updates are announced and Escape closes the topmost open panel', () => {
+  assert.match(page, /className=\"notice-bar\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"/);
+  const start = page.indexOf('function handleShortcut');
+  const end = page.indexOf('window.addEventListener('keydown'', start);
+  const shortcuts = page.slice(start, end);
+  assert.match(shortcuts, /event\.key === 'Escape'/);
+  assert.match(shortcuts, /if \(deleteTarget\) \{ setDeleteTarget\(null\); return; \}/);
+  assert.match(shortcuts, /if \(authOpen\) \{ setAuthOpen\(false\); return; \}/);
+  assert.match(shortcuts, /if \(composeOpen\) \{ setComposeOpen\(false\); return; \}/);
+  assert.match(shortcuts, /if \(selected\) \{ setSelected\(null\); return; \}/);
+});

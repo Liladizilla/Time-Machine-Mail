@@ -92,13 +92,19 @@ export default function Home() {
 
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        if (deleteTarget) { setDeleteTarget(null); return; }
+        if (authOpen) { setAuthOpen(false); return; }
+        if (composeOpen) { setComposeOpen(false); return; }
+        if (selected) { setSelected(null); return; }
+      }
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
       if (event.key.toLowerCase() === 'n') { event.preventDefault(); setEditingId(null); setRecipient(''); setSubject(''); setBody(''); setSaveAsDraft(false); setComposeOpen(true); setSelected(null); }
       if (event.key.toLowerCase() === 'k') { event.preventDefault(); searchInputRef.current?.focus(); }
     }
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, []);
+  }, [authOpen, composeOpen, deleteTarget, selected]);
 
   function startEditing(message: Message) {
     const date = new Date(message.timeline_at);
@@ -239,7 +245,7 @@ export default function Home() {
       <header className="topbar"><div className="breadcrumb">Workspace <span>/</span> <strong>{folder === 'drafts' ? 'Drafts' : 'Timeline'}</strong></div><div className="topbar-right"><span className="status-dot"/> {user ? 'CLOUD SYNC' : 'LOCAL PREVIEW'} <button className="icon-button" aria-label="Account settings" onClick={() => user ? setNotice('Account settings will be expanded in a later task.') : setAuthOpen(true)}><Settings2 size={17}/></button></div></header>
       <div className="content-wrap">
         <div className="page-heading"><div><div className="eyebrow"><Sparkles size={13}/> YOUR INBOX, OUT OF ORDER</div><h1>Every message has <em>its moment.</em></h1><p>Place a note in the past. Find it exactly where you left it.</p></div><button className="primary-button" onClick={() => { setEditingId(null); setRecipient(''); setSubject(''); setBody(''); setSaveAsDraft(false); setComposeOpen(true); setSelected(null); }}><Plus size={17}/> New message</button></div>
-        <div className="notice-bar"><span className="notice-icon"><ShieldCheck size={15}/></span><span>{notice}</span><button onClick={() => setNotice(user ? `Signed in as ${user.email}` : 'Preview data is temporary. Configure Supabase for private cloud storage.')} aria-label="Dismiss notice"><X size={14}/></button></div>
+        <div className="notice-bar" role="status" aria-live="polite" aria-atomic="true"><span className="notice-icon"><ShieldCheck size={15}/></span><span>{notice}</span><button onClick={() => setNotice(user ? `Signed in as ${user.email}` : 'Preview data is temporary. Configure Supabase for private cloud storage.')} aria-label="Dismiss notice"><X size={14}/></button></div>
         <div className="toolbar"><label className="search-box"><Search size={17}/><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search subject, sender, recipient…"/><kbd>⌘ K</kbd></label><button className="sort-button" onClick={() => setSort(sort === 'newest' ? 'oldest' : 'newest')}><ArrowDownUp size={15}/>{sort === 'newest' ? 'Newest first' : 'Oldest first'}<ChevronDown size={14}/></button></div>
         <div className="timeline-meta"><span>{visibleMessages.length} {visibleMessages.length === 1 ? (folder === 'drafts' ? 'DRAFT' : 'MESSAGE') : (folder === 'drafts' ? 'DRAFTS' : 'MESSAGES')}</span><span>{folder === 'drafts' ? 'UNSENT DRAFTS' : 'ORDERED BY TIMELINE DATE'} <span className="meta-divider">·</span> {loading ? 'SYNCING…' : 'READY'}</span></div>
         <div className="timeline-list">
