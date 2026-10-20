@@ -97,3 +97,9 @@ test('display settings offer persisted density choices and keyboard dismissal', 
   assert.match(page, /if \(settingsOpen\) \{ setSettingsOpen\(false\); return; \}/);
   assert.match(page, /density-compact/);
 });
+
+test('display density tolerates blocked storage and waits for hydration before persisting', () => {
+  assert.match(page, /const \[densityLoaded, setDensityLoaded\] = useState\(false\)/);
+  assert.match(page, /localStorage\.getItem\('tmm-density'\)[\s\S]*?catch \{[\s\S]*?finally \{[\s\S]*?setDensityLoaded\(true\)/);
+  assert.match(page, /if \(!densityLoaded\) return;[\s\S]*?localStorage\.setItem\('tmm-density', density\)[\s\S]*?catch \{/);
+});
