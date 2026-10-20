@@ -87,3 +87,13 @@ test('status updates are announced and Escape closes the topmost open panel', ()
   assert.match(shortcuts, /if \(composeOpen\) \{ setComposeOpen\(false\); return; \}/);
   assert.match(shortcuts, /if \(selected\) \{ setSelected\(null\); return; \}/);
 });
+
+test('display settings offer persisted density choices and keyboard dismissal', () => {
+  assert.match(page, /localStorage\.getItem\('tmm-density'\)/);
+  assert.match(page, /localStorage\.setItem\('tmm-density', density\)/);
+  assert.match(page, /setDensity\('comfortable'\)/);
+  assert.match(page, /setDensity\('compact'\)/);
+  assert.match(page, /aria-labelledby=\"settings-title\"/);
+  assert.match(page, /if \(settingsOpen\) \{ setSettingsOpen\(false\); return; \}/);
+  assert.match(page, /density-compact/);
+});

@@ -27,6 +27,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('Preview mode · connect Supabase to save your own timeline');
   const [authOpen, setAuthOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'reset'>('signin');
@@ -83,6 +85,13 @@ export default function Home() {
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
+  useEffect(() => {
+    const savedDensity = window.localStorage.getItem('tmm-density');
+    if (savedDensity === 'compact' || savedDensity === 'comfortable') setDensity(savedDensity);
+  }, []);
+
+  useEffect(() => { window.localStorage.setItem('tmm-density', density); }, [density]);
+
   useEffect(() => { if (user) void refreshMessages(user); }, [user, sort]);
 
   const visibleMessages = useMemo(() => searchMessages(messages.filter(message => folder === 'drafts' ? message.status === 'draft' : message.status !== 'draft'), query).sort((a, b) => {
@@ -94,6 +103,7 @@ export default function Home() {
     function handleShortcut(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         if (deleteTarget) { setDeleteTarget(null); return; }
+        if (settingsOpen) { setSettingsOpen(false); return; }
         if (authOpen) { setAuthOpen(false); return; }
         if (composeOpen) { setComposeOpen(false); return; }
         if (selected) { setSelected(null); return; }
@@ -104,7 +114,7 @@ export default function Home() {
     }
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, [authOpen, composeOpen, deleteTarget, selected]);
+  }, [authOpen, composeOpen, deleteTarget, selected, settingsOpen]);
 
   function startEditing(message: Message) {
     const date = new Date(message.timeline_at);
@@ -229,7 +239,7 @@ export default function Home() {
     setComposeOpen(false); setSelected(null); setEditingId(null); setRecipient(''); setSubject(''); setBody('');
   }
 
-  return <main className="app-shell">
+  return <main className={`app-shell ${density === 'compact' ? 'density-compact' : ''}`}>
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark"><Clock3 size={21}/></div><div><strong>time machine</strong><span>MAIL / 0.1</span></div></div>
       <button className="compose-button" onClick={() => { setEditingId(null); setRecipient(''); setSubject(''); setBody(''); setSaveAsDraft(false); setComposeOpen(true); setSelected(null); }}><Plus size={17}/> Compose <span>⌘ N</span></button>
@@ -242,7 +252,7 @@ export default function Home() {
     </aside>
 
     <section className="main-panel">
-      <header className="topbar"><div className="topbar-search"><Search size={18}/><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search your timeline" aria-label="Search timeline"/><kbd>Ctrl K</kbd></div><div className="topbar-right"><span className="status-dot"/> <span>{user ? 'SYNCED' : 'PREVIEW MODE'}</span><button className="icon-button" aria-label="Account settings" onClick={() => user ? setNotice('Account settings will be expanded in a later task.') : setAuthOpen(true)}><Settings2 size={17}/></button></div></header>
+      <header className="topbar"><div className="topbar-search"><Search size={18}/><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search your timeline" aria-label="Search timeline"/><kbd>Ctrl K</kbd></div><div className="topbar-right"><span className="status-dot"/> <span>{user ? 'SYNCED' : 'PREVIEW MODE'}</span><button className="icon-button" aria-label="Display settings" onClick={() => setSettingsOpen(true)}><Settings2 size={17}/></button></div></header>
       <div className="content-wrap">
         <div className="page-heading"><div><div className="eyebrow"><Clock3 size={13}/> TIME MACHINE MAIL</div><h1>{folder === 'drafts' ? 'Drafts' : 'Timeline'}</h1><p>{folder === 'drafts' ? 'Messages you are still shaping.' : 'Your messages, arranged by the moment you choose.'}</p></div><button className="primary-button heading-compose" onClick={() => { setEditingId(null); setRecipient(''); setSubject(''); setBody(''); setSaveAsDraft(false); setComposeOpen(true); setSelected(null); }}><Plus size={17}/> Compose</button></div>
         <div className="notice-bar" role="status" aria-live="polite" aria-atomic="true"><span className="notice-icon"><ShieldCheck size={15}/></span><span>{notice}</span><button onClick={() => setNotice(user ? `Signed in as ${user.email}` : 'Preview data is temporary. Configure Supabase for private cloud storage.')} aria-label="Dismiss notice"><X size={14}/></button></div>
@@ -260,6 +270,8 @@ export default function Home() {
         <footer className="page-footer"><span><CalendarClock size={14}/> TIME IS A SORTING RULE, NOT A CLAIM OF DELIVERY.</span><span>TIME MACHINE MAIL <b>0.1.0</b></span></footer>
       </div>
     </section>
+
+    {settingsOpen && <div className="modal-backdrop" onClick={() => setSettingsOpen(false)}><section className="auth-modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">MAKE IT YOURS</span><h2 id="settings-title">Display settings</h2></div><button className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="Close display settings"><X size={18}/></button></div><p className="auth-copy">Choose how much detail you want to see in your timeline. This preference is saved on this device.</p><fieldset className="density-options"><legend>Message list density</legend><label className={`density-option ${density === 'comfortable' ? 'chosen' : ''}`}><input type="radio" name="density" value="comfortable" checked={density === 'comfortable'} onChange={() => setDensity('comfortable')}/><span><strong>Comfortable</strong><small>More breathing room and message previews.</small></span></label><label className={`density-option ${density === 'compact' ? 'chosen' : ''}`}><input type="radio" name="density" value="compact" checked={density === 'compact'} onChange={() => setDensity('compact')}/><span><strong>Compact</strong><small>More entries visible at once.</small></span></label></fieldset><div className="composer-foot settings-foot"><span className="date-note"><ShieldCheck size={14}/> Stored locally in this browser</span><button className="primary-button" onClick={() => setSettingsOpen(false)}>Done</button></div></section></div>}
 
     {selected && !composeOpen && <div className="detail-backdrop" onClick={() => setSelected(null)}><section className="detail-panel" onClick={e => e.stopPropagation()}><div className="drawer-head"><span>MESSAGE DETAIL</span><button className="icon-button" onClick={() => setSelected(null)} aria-label="Close message"><X size={17}/></button></div><div className="detail-date"><CalendarClock size={17}/>{formatTimelineDate(selected.timeline_at)}</div>{selected.created_at && <div className="detail-date"><Clock3 size={17}/>Recorded in app {formatTimelineDate(selected.created_at)}</div>}<h2>{selected.subject}</h2><div className="detail-address"><span>FROM</span><strong>{selected.sender}</strong><span>TO</span><strong>{selected.recipient}</strong></div><div className="detail-body">{selected.body}</div><div className="detail-disclaimer"><ShieldCheck size={16}/><span>This entry is positioned by its selected timeline date. It does not indicate that an email was delivered on that date.</span></div><div className="detail-actions"><button className="sort-button" onClick={() => startEditing(selected)}><Pencil size={14}/> Edit entry</button><button className="sort-button" onClick={() => setDeleteTarget(selected)}><Trash2 size={14}/> Delete</button></div></section></div>}
 
