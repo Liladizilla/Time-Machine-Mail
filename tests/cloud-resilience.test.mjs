@@ -11,11 +11,12 @@ test('session restoration handles rejected requests and avoids updates after unm
 });
 
 test('cloud timeline loading always clears its loading state', () => {
-  const refresh = page.match(/async function refreshMessages[\s\S]*?
-  }/);
-  assert.ok(refresh, 'refreshMessages handler exists');
-  assert.match(refresh[0], /catch \{/);
-  assert.match(refresh[0], /finally \{[\s\S]*?setLoading\(false\)/);
+  const start = page.indexOf('async function refreshMessages');
+  const end = page.indexOf('\n  useEffect', start);
+  const refresh = page.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'refreshMessages handler exists');
+  assert.match(refresh, /catch \{/);
+  assert.match(refresh, /finally \{[\s\S]*?setLoading\(false\)/);
 });
 
 test('cloud delete and write operations are scoped to the signed-in user', () => {
@@ -25,10 +26,11 @@ test('cloud delete and write operations are scoped to the signed-in user', () =>
 });
 
 test('failed cloud writes report failure and do not close the composer', () => {
-  const compose = page.match(/async function handleCompose[\s\S]*?
-  }/);
-  assert.ok(compose, 'handleCompose handler exists');
-  assert.match(compose[0], /Your changes were not saved/);
-  assert.match(compose[0], /finally \{[\s\S]*?setLoading\(false\)/);
-  assert.ok(compose[0].indexOf('Could not reach the cloud service') < compose[0].indexOf('setComposeOpen(false)'), 'failure returns before closing the composer');
+  const start = page.indexOf('async function handleCompose');
+  const end = page.indexOf('\n\n  return <main', start);
+  const compose = page.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'handleCompose handler exists');
+  assert.match(compose, /Your changes were not saved/);
+  assert.match(compose, /finally \{[\s\S]*?setLoading\(false\)/);
+  assert.ok(compose.indexOf('Could not reach the cloud service') < compose.indexOf('setComposeOpen(false)'), 'failure returns before closing the composer');
 });
