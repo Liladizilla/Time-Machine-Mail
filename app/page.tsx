@@ -39,18 +39,21 @@ export default function Home() {
   const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
   const composeInFlight = useRef(false);
   const authInFlight = useRef(false);
+  const timelineRequestSequence = useRef(0);
 
   async function refreshMessages(currentUser = user) {
     if (!supabase || !currentUser) return;
+    const requestSequence = ++timelineRequestSequence.current;
     setLoading(true);
     try {
       const { data, error } = await supabase.from('messages').select('*').eq('user_id', currentUser.id).order('timeline_at', { ascending: sort === 'oldest' });
+      if (requestSequence !== timelineRequestSequence.current) return;
       if (error) { setNotice(`Could not load messages: ${error.message}`); return; }
       setMessages((data ?? []) as Message[]);
     } catch {
-      setNotice('Could not reach the cloud timeline. Check your connection and try again.');
+      if (requestSequence === timelineRequestSequence.current) setNotice('Could not reach the cloud timeline. Check your connection and try again.');
     } finally {
-      setLoading(false);
+      if (requestSequence === timelineRequestSequence.current) setLoading(false);
     }
   }
 
@@ -66,9 +69,16 @@ export default function Home() {
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const next = session?.user ? { id: session.user.id, email: session.user.email } : null;
+      timelineRequestSequence.current += 1;
+      setLoading(false);
       setUser(next);
-      if (next) { setNotice(`Signed in as ${next.email ?? 'your account'}`); }
-      else { setMessages(sampleMessages); setNotice('Signed out · preview timeline shown'); }
+      if (next) {
+        setMessages([]);
+        setNotice(`Signed in as ${next.email ?? 'your account'}`);
+      } else {
+        setMessages(sampleMessages);
+        setNotice('Signed out · preview timeline shown');
+      }
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);

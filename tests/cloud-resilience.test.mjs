@@ -61,3 +61,17 @@ test('authentication submissions are guarded against rapid duplicate requests', 
   assert.match(auth, /finally \{[\s\S]*?authInFlight\.current = false;[\s\S]*?setLoading\(false\)/);
   assert.match(page, /className=\"primary-button auth-submit\" type=\"submit\" disabled=\{loading\}/);
 });
+
+test('stale timeline responses cannot overwrite the active account or sort order', () => {
+  const start = page.indexOf('async function refreshMessages');
+  const end = page.indexOf('\n  useEffect', start);
+  const refresh = page.slice(start, end);
+  assert.match(refresh, /const requestSequence = \+\+timelineRequestSequence\.current/);
+  assert.match(refresh, /if \(requestSequence !== timelineRequestSequence\.current\) return;/);
+  assert.match(refresh, /if \(requestSequence === timelineRequestSequence\.current\) setLoading\(false\)/);
+  const authStart = page.indexOf('supabase.auth.onAuthStateChange');
+  const authEnd = page.indexOf('listener.subscription.unsubscribe()', authStart);
+  const authListener = page.slice(authStart, authEnd);
+  assert.match(authListener, /timelineRequestSequence\.current \+= 1/);
+  assert.match(authListener, /if \(next\) \{[\s\S]*?setMessages\(\[\]\)/);
+});
