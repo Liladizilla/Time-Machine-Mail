@@ -1,7 +1,7 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Archive, ArrowDownUp, CalendarClock, ChevronDown, Clock3, Inbox, LogIn, LogOut, Plus, Search, Send, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDownUp, CalendarClock, ChevronDown, Clock3, FileText, Inbox, LogIn, LogOut, Plus, Search, Send, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { formatTimelineDate, searchMessages, validateCompose } from '@/lib/timeline.mjs';
 
@@ -20,6 +20,8 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>(sampleMessages);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
+  const [folder, setFolder] = useState<'timeline' | 'drafts'>('timeline');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [selected, setSelected] = useState<Message | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,10 +61,20 @@ export default function Home() {
 
   useEffect(() => { if (user) void refreshMessages(user); }, [user, sort]);
 
-  const visibleMessages = useMemo(() => searchMessages(messages, query).sort((a, b) => {
+  const visibleMessages = useMemo(() => searchMessages(messages.filter(message => folder === 'drafts' ? message.status === 'draft' : message.status !== 'draft'), query).sort((a, b) => {
     const diff = new Date(a.timeline_at).getTime() - new Date(b.timeline_at).getTime();
     return sort === 'oldest' ? diff : -diff;
-  }), [messages, query, sort]);
+  }), [messages, query, sort, folder]);
+
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      if (event.key.toLowerCase() === 'n') { event.preventDefault(); setComposeOpen(true); setSelected(null); }
+      if (event.key.toLowerCase() === 'k') { event.preventDefault(); searchInputRef.current?.focus(); }
+    }
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
 
   async function handleAuth(event: FormEvent) {
     event.preventDefault();
@@ -99,6 +111,8 @@ export default function Home() {
       setNotice('Sign in before saving to your private cloud timeline.');
       setAuthOpen(true); return;
     }
+    if (user && supabase) setNotice(saveAsDraft ? 'Draft saved to your private cloud account.' : 'Timeline entry saved to your private cloud account.');
+    setFolder(saveAsDraft ? 'drafts' : 'timeline');
     setComposeOpen(false); setSelected(null); setRecipient(''); setSubject(''); setBody('');
   }
 
@@ -107,20 +121,20 @@ export default function Home() {
       <div className="brand"><div className="brand-mark"><Clock3 size={21}/></div><div><strong>time machine</strong><span>MAIL / 0.1</span></div></div>
       <button className="compose-button" onClick={() => { setComposeOpen(true); setSelected(null); }}><Plus size={17}/> Compose <span>⌘ N</span></button>
       <div className="nav-label">WORKSPACE</div>
-      <button className="nav-item active"><Inbox size={17}/> Timeline <span className="nav-count">{messages.length}</span></button>
-      <button className="nav-item" onClick={() => setSort(sort === 'newest' ? 'oldest' : 'newest')}><Archive size={17}/> Archive</button>
+      <button className={`nav-item ${folder === 'timeline' ? 'active' : ''}`} onClick={() => { setFolder('timeline'); setSelected(null); }}><Inbox size={17}/> Timeline <span className="nav-count">{messages.filter(message => message.status !== 'draft').length}</span></button>
+      <button className={`nav-item ${folder === 'drafts' ? 'active' : ''}`} onClick={() => { setFolder('drafts'); setSelected(null); }}><FileText size={17}/> Drafts <span className="nav-count">{messages.filter(message => message.status === 'draft').length}</span></button>
       <div className="sidebar-bottom"><div className="security-note"><ShieldCheck size={17}/><div><strong>Your timeline, yours</strong><p>Private by account. Historical date is not a delivery claim.</p></div></div>
         <button className="account-button" onClick={() => user ? void signOut() : setAuthOpen(true)}>{user ? <><div className="avatar">{(user.email ?? 'U')[0].toUpperCase()}</div><div className="account-copy"><strong>{user.email}</strong><span>Signed in · Sign out</span></div><LogOut size={16}/></> : <><div className="avatar"><LogIn size={16}/></div><div className="account-copy"><strong>Connect account</strong><span>{supabaseConfigured ? 'Sign in or create account' : 'Supabase setup needed'}</span></div><ChevronDown size={16}/></>}</button>
       </div>
     </aside>
 
     <section className="main-panel">
-      <header className="topbar"><div className="breadcrumb">Workspace <span>/</span> <strong>Timeline</strong></div><div className="topbar-right"><span className="status-dot"/> {user ? 'CLOUD SYNC' : 'LOCAL PREVIEW'} <button className="icon-button" aria-label="Account settings" onClick={() => user ? setNotice('Account settings will be expanded in a later task.') : setAuthOpen(true)}><Settings2 size={17}/></button></div></header>
+      <header className="topbar"><div className="breadcrumb">Workspace <span>/</span> <strong>{folder === 'drafts' ? 'Drafts' : 'Timeline'}</strong></div><div className="topbar-right"><span className="status-dot"/> {user ? 'CLOUD SYNC' : 'LOCAL PREVIEW'} <button className="icon-button" aria-label="Account settings" onClick={() => user ? setNotice('Account settings will be expanded in a later task.') : setAuthOpen(true)}><Settings2 size={17}/></button></div></header>
       <div className="content-wrap">
         <div className="page-heading"><div><div className="eyebrow"><Sparkles size={13}/> YOUR INBOX, OUT OF ORDER</div><h1>Every message has <em>its moment.</em></h1><p>Place a note in the past. Find it exactly where you left it.</p></div><button className="primary-button" onClick={() => { setComposeOpen(true); setSelected(null); }}><Plus size={17}/> New message</button></div>
         <div className="notice-bar"><span className="notice-icon"><ShieldCheck size={15}/></span><span>{notice}</span><button onClick={() => setNotice(user ? `Signed in as ${user.email}` : 'Preview data is temporary. Configure Supabase for private cloud storage.')} aria-label="Dismiss notice"><X size={14}/></button></div>
-        <div className="toolbar"><label className="search-box"><Search size={17}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search subject, sender, recipient…"/><kbd>⌘ K</kbd></label><button className="sort-button" onClick={() => setSort(sort === 'newest' ? 'oldest' : 'newest')}><ArrowDownUp size={15}/>{sort === 'newest' ? 'Newest first' : 'Oldest first'}<ChevronDown size={14}/></button></div>
-        <div className="timeline-meta"><span>{visibleMessages.length} {visibleMessages.length === 1 ? 'MESSAGE' : 'MESSAGES'}</span><span>ORDERED BY TIMELINE DATE <span className="meta-divider">·</span> {loading ? 'SYNCING…' : 'READY'}</span></div>
+        <div className="toolbar"><label className="search-box"><Search size={17}/><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search subject, sender, recipient…"/><kbd>⌘ K</kbd></label><button className="sort-button" onClick={() => setSort(sort === 'newest' ? 'oldest' : 'newest')}><ArrowDownUp size={15}/>{sort === 'newest' ? 'Newest first' : 'Oldest first'}<ChevronDown size={14}/></button></div>
+        <div className="timeline-meta"><span>{visibleMessages.length} {visibleMessages.length === 1 ? (folder === 'drafts' ? 'DRAFT' : 'MESSAGE') : (folder === 'drafts' ? 'DRAFTS' : 'MESSAGES')}</span><span>{folder === 'drafts' ? 'UNSENT DRAFTS' : 'ORDERED BY TIMELINE DATE'} <span className="meta-divider">·</span> {loading ? 'SYNCING…' : 'READY'}</span></div>
         <div className="timeline-list">
           {visibleMessages.map((message, index) => <button key={message.id} className={`message-row ${selected?.id === message.id ? 'selected' : ''}`} onClick={() => { setSelected(message); setComposeOpen(false); }}>
             <div className="timeline-track"><div className={`timeline-node ${index === 0 ? 'latest' : ''}`}/>{index < visibleMessages.length - 1 && <div className="timeline-line"/>}</div>
@@ -128,7 +142,7 @@ export default function Home() {
             <div className="message-main"><div className="message-topline"><span className="sender">{message.sender}</span><span className="message-time">{new Date(message.timeline_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span></div><strong className="message-subject">{message.subject}</strong><p>{message.body}</p></div>
             <div className="message-end">{message.status === 'draft' ? <span className="draft-pill">DRAFT</span> : <span className="entry-pill">TIMELINE ENTRY</span>}<span className="row-arrow">↗</span></div>
           </button>)}
-          {visibleMessages.length === 0 && <div className="empty-state"><Search size={23}/><strong>No messages found</strong><p>Try another search or compose a new timeline entry.</p><button onClick={() => setQuery('')}>Clear search</button></div>}
+          {visibleMessages.length === 0 && <div className="empty-state"><Search size={23}/><strong>{folder === 'drafts' ? 'No drafts yet' : 'No messages found'}</strong><p>{folder === 'drafts' ? 'Save a message as a draft and it will wait here.' : 'Try another search or compose a new timeline entry.'}</p><button onClick={() => setQuery('')}>Clear search</button></div>}
         </div>
         <footer className="page-footer"><span><CalendarClock size={14}/> TIME IS A SORTING RULE, NOT A CLAIM OF DELIVERY.</span><span>TIME MACHINE MAIL <b>0.1.0</b></span></footer>
       </div>
