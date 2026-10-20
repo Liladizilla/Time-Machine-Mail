@@ -1,6 +1,6 @@
 {
   "name": "time-machine-mail",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "A chronological email workspace for messages anchored to chosen dates.",
   "scripts": {
@@ -13,7 +13,7 @@
     "desktop:dist": "npm run build && npm run desktop:prepare && electron-builder --publish never --linux AppImage deb",
     "desktop:dist:win": "npm run build && npm run desktop:prepare && electron-builder --publish never --win nsis",
     "desktop:dist:mac": "npm run build && npm run desktop:prepare && electron-builder --publish never --mac dmg",
-    "desktop:prepare": "npm install --omit=dev --no-audit --no-fund --prefix .next/standalone && node -e \"require.resolve('next', { paths: [require('path').resolve('.next/standalone')] })\""
+    "desktop:prepare": "npm install --omit=dev --no-audit --no-fund --prefix .next/standalone && node -e \"const p=require('path').resolve('.next/standalone'); const fs=require('fs'); if(!fs.existsSync(require('path').join(p,'server.js'))) throw Error('Next standalone server.js is missing'); if(!fs.existsSync(require('path').join(p,'node_modules/next/package.json'))) throw Error('Next runtime package is missing from standalone node_modules'); require.resolve('next', { paths: [p] }); console.log('Verified standalone Next.js runtime:', require.resolve('next', { paths: [p] }));\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
@@ -74,6 +74,13 @@
       {
         "from": "build/icons/icon.png",
         "to": "icons/icon.png"
+      },
+      {
+        "from": ".next/standalone/node_modules",
+        "to": "app/node_modules",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "linux": {
