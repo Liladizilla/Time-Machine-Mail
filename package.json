@@ -35,7 +35,7 @@
     "concurrently": "^9.2.1",
     "wait-on": "^8.0.4"
   },
-  "main": "electron/main.cjs",
+  "main": "electron/main.mjs",
   "build": {
     "appId": "dev.timemachinemail.desktop",
     "productName": "Time Machine Mail",

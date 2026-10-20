@@ -1,7 +1,10 @@
-const { app, BrowserWindow, Menu, shell, utilityProcess, dialog } = require('electron');
-const http = require('node:http');
-const fs = require('node:fs');
-const path = require('node:path');
+import { app, BrowserWindow, Menu, shell, utilityProcess, dialog } from 'electron';
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_URL = 'http://127.0.0.1:3000';
 const PACKAGED_URL = 'http://127.0.0.1:43127';
 function readDesktopConfig() {

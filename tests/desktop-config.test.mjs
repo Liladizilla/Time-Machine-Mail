@@ -7,7 +7,7 @@ const read = (path) => readFileSync(new URL(path, root), 'utf8');
 
 test('desktop scripts and standalone Next output are configured', () => {
   const pkg = JSON.parse(read('package.json'));
-  assert.equal(pkg.main, 'electron/main.cjs');
+  assert.equal(pkg.main, 'electron/main.mjs');
   assert.match(pkg.scripts['desktop:dev'], /electron/);
   assert.match(pkg.scripts['desktop:dist'], /electron-builder --linux AppImage deb/);
   assert.match(pkg.scripts['desktop:dist:win'], /electron-builder --win nsis/);
@@ -18,7 +18,7 @@ test('desktop scripts and standalone Next output are configured', () => {
 });
 
 test('Electron renderer is isolated and external navigation is restricted', () => {
-  const main = read('electron/main.cjs');
+  const main = read('electron/main.mjs');
   assert.match(main, /contextIsolation: true/);
   assert.match(main, /nodeIntegration: false/);
   assert.match(main, /sandbox: true/);
@@ -36,5 +36,5 @@ test('desktop release workflow builds and uploads platform installers', () => {
   assert.ok(existsSync(new URL('../build/icons/icon.png', import.meta.url)));
   assert.ok(existsSync(new URL('../app/runtime-config.js/route.ts', import.meta.url)));
   assert.match(read('lib/supabase.ts'), /runtimeConfig \? runtimeConfig\.supabaseUrl/);
-  assert.match(read('electron/main.cjs'), /TMM_SUPABASE_ANON_KEY: desktopConfig\.anonKey/);
+  assert.match(read('electron/main.mjs'), /TMM_SUPABASE_ANON_KEY: desktopConfig\.anonKey/);
 });
