@@ -29,7 +29,7 @@ export default function Home() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'reset'>('signin');
   const [recipient, setRecipient] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -101,13 +101,25 @@ export default function Home() {
     event.preventDefault();
     if (!supabase) { setNotice('Add Supabase credentials to .env.local to enable accounts.'); return; }
     setLoading(true);
-    const result = authMode === 'signup'
-      ? await supabase.auth.signUp({ email: authEmail, password: authPassword })
-      : await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
-    setLoading(false);
-    if (result.error) { setNotice(result.error.message); return; }
-    if (authMode === 'signup' && !result.data.session) setNotice('Check your email to confirm your account, then sign in.');
-    else { setNotice('Account connected. Loading your private timeline.'); setAuthOpen(false); }
+    try {
+      if (authMode === 'reset') {
+        const { error } = await supabase.auth.resetPasswordForEmail(authEmail, { redirectTo: `${window.location.origin}/reset-password` });
+        if (error) { setNotice(error.message); return; }
+        setNotice('If an account exists for that address, a password-reset link is on its way. Check your inbox.');
+        setAuthOpen(false);
+        return;
+      }
+      const result = authMode === 'signup'
+        ? await supabase.auth.signUp({ email: authEmail, password: authPassword })
+        : await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+      if (result.error) { setNotice(result.error.message); return; }
+      if (authMode === 'signup' && !result.data.session) setNotice('Check your email to confirm your account, then sign in.');
+      else { setNotice('Account connected. Loading your private timeline.'); setAuthOpen(false); }
+    } catch {
+      setNotice('Could not reach the account service. Check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function signOut() {
@@ -183,6 +195,6 @@ export default function Home() {
 
     {deleteTarget && <div className="modal-backdrop" onClick={() => setDeleteTarget(null)}><section className="auth-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">PERMANENT ACTION</span><h2>Delete this entry?</h2></div><button className="icon-button" onClick={() => setDeleteTarget(null)} aria-label="Cancel deletion"><X size={18}/></button></div><p className="auth-copy">This removes “{deleteTarget.subject}” from your timeline. This action cannot be undone.</p><div className="composer-foot"><button className="sort-button" onClick={() => setDeleteTarget(null)}>Cancel</button><button className="primary-button" disabled={loading} onClick={() => void deleteMessage(deleteTarget)}><Trash2 size={15}/>{loading ? 'Deleting…' : 'Delete entry'}</button></div></section></div>}
 
-    {authOpen && <div className="modal-backdrop" onClick={() => setAuthOpen(false)}><section className="auth-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">PRIVATE BY DESIGN</span><h2>{authMode === 'signin' ? 'Welcome back.' : 'Create your account.'}</h2></div><button className="icon-button" onClick={() => setAuthOpen(false)} aria-label="Close account dialog"><X size={18}/></button></div><p className="auth-copy">Your timeline belongs to you. Sign in to save and sync it securely.</p><form onSubmit={handleAuth} className="compose-form"><label>Email <input type="email" required autoComplete="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="you@example.com"/></label><label>Password <input type="password" minLength={8} required autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'} value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="At least 8 characters"/></label><button className="primary-button auth-submit" type="submit" disabled={loading}>{loading ? 'Please wait…' : authMode === 'signin' ? 'Sign in' : 'Create account'}</button></form><button className="auth-switch" onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')}>{authMode === 'signin' ? 'New here? Create an account' : 'Already have an account? Sign in'}</button>{!supabaseConfigured && <p className="setup-hint">Setup required: copy <code>.env.example</code> to <code>.env.local</code>, then add your Supabase project URL and public key.</p>}</section></div>}
+    {authOpen && <div className="modal-backdrop" onClick={() => setAuthOpen(false)}><section className="auth-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">PRIVATE BY DESIGN</span><h2>{authMode === 'signin' ? 'Welcome back.' : authMode === 'signup' ? 'Create your account.' : 'Reset your password.'}</h2></div><button className="icon-button" onClick={() => setAuthOpen(false)} aria-label="Close account dialog"><X size={18}/></button></div><p className="auth-copy">{authMode === 'reset' ? 'We will email you a secure link to choose a new password.' : 'Your timeline belongs to you. Sign in to save and sync it securely.'}</p><form onSubmit={handleAuth} className="compose-form"><label>Email <input type="email" required autoComplete="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="you@example.com"/></label>{authMode !== 'reset' && <label>Password <input type="password" minLength={8} required autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'} value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="At least 8 characters"/></label>}<button className="primary-button auth-submit" type="submit" disabled={loading}>{loading ? 'Please wait…' : authMode === 'reset' ? 'Send reset link' : authMode === 'signin' ? 'Sign in' : 'Create account'}</button></form>{authMode === 'signin' && <button className="auth-switch auth-forgot" onClick={() => setAuthMode('reset')}>Forgot your password?</button>}<button className="auth-switch" onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}>{authMode === 'signup' || authMode === 'reset' ? 'Back to sign in' : 'New here? Create an account'}</button>{!supabaseConfigured && <p className="setup-hint">Setup required: copy <code>.env.example</code> to <code>.env.local</code>, then add your Supabase project URL and public key.</p>}</section></div>}
   </main>;
 }
