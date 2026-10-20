@@ -1,0 +1,78 @@
+name: Linux desktop release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Prepare Linux desktop release'))
+    name: Build and verify Linux installers
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-key
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build Linux installers
+        run: npm run desktop:dist
+      - name: Verify packaged Linux runtime
+        shell: bash
+        run: |
+          appimage="$(find release -maxdepth 1 -name '*.AppImage' -print -quit)"
+          test -n "$appimage"
+          chmod +x "$appimage"
+          "$appimage" --appimage-extract >/dev/null
+          test -f squashfs-root/resources/app/server.js
+          test -f squashfs-root/resources/app/node_modules/next/package.json
+          node -e "require.resolve('next', { paths: [require('path').resolve('squashfs-root/resources/app')] }); console.log('Packaged Next.js runtime resolves successfully')"
+      - name: Upload Linux installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: time-machine-mail-linux
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-linux-release:
+    name: Publish Linux installers
+    if: needs.build-linux.result == 'success'
+    needs: build-linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+      - name: Read package version
+        id: version
+        run: node -e "console.log('version=' + require('./package.json').version)" >> "$GITHUB_OUTPUT"
+      - name: Download Linux installers
+        uses: actions/download-artifact@v4
+        with:
+          name: time-machine-mail-linux
+          path: release
+      - name: Publish Linux release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-v${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Time Machine Mail v${{ steps.version.outputs.version }} (Linux)
+          body: |
+            Linux desktop build for Time Machine Mail.
+
+            The AppImage package is checked in CI to ensure the packaged Next.js standalone server and runtime are present. This verifies packaging, not a full GUI launch on every Linux distribution.
+          generate_release_notes: true
+          files: release/*
