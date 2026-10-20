@@ -50,6 +50,8 @@ jobs:
 
   publish-linux-release:
     name: Publish Linux installers
+    permissions:
+      contents: write
     if: needs.build-linux.result == 'success'
     needs: build-linux
     runs-on: ubuntu-latest
