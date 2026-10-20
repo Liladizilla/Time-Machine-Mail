@@ -34,3 +34,19 @@ test('failed cloud writes report failure and do not close the composer', () => {
   assert.match(compose, /finally \{[\s\S]*?setLoading\(false\)/);
   assert.ok(compose.indexOf('Could not reach the cloud service') < compose.indexOf('setComposeOpen(false)'), 'failure returns before closing the composer');
 });
+
+test('cloud updates and inserts require a returned record before reporting success', () => {
+  const start = page.indexOf('async function handleCompose');
+  const end = page.indexOf('\n\n  return <main', start);
+  const compose = page.slice(start, end);
+  assert.match(compose, /composeInFlight\.current/);
+  assert.match(compose, /if \(!data\) \{ setNotice\('The cloud service did not return the updated entry/);
+  assert.match(compose, /if \(!data\) \{ setNotice\('The cloud service did not confirm the saved entry/);
+  assert.match(page, /type=\"submit\" disabled=\{loading \|\| composeInFlight\.current\}/);
+});
+
+test('cloud updates and deletes report entries that no longer exist', () => {
+  assert.match(page, /error\.code === 'PGRST116'[\s\S]*?no longer exists or is not accessible/);
+  assert.match(page, /delete\(\)\.eq\('id', message\.id\)\.eq\('user_id', user\.id\)\.select\('id'\)/);
+  assert.match(page, /if \(!data\?\.length\) \{ setNotice\('This entry no longer exists or is not accessible/);
+});

@@ -37,6 +37,7 @@ export default function Home() {
   const [saveAsDraft, setSaveAsDraft] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
+  const composeInFlight = useRef(false);
 
   async function refreshMessages(currentUser = user) {
     if (!supabase || !currentUser) return;
@@ -100,8 +101,9 @@ export default function Home() {
     if (user && supabase) {
       setLoading(true);
       try {
-        const { error } = await supabase.from('messages').delete().eq('id', message.id).eq('user_id', user.id);
+        const { data, error } = await supabase.from('messages').delete().eq('id', message.id).eq('user_id', user.id).select('id');
         if (error) { setNotice(`Delete failed: ${error.message}`); return; }
+        if (!data?.length) { setNotice('This entry no longer exists or is not accessible to this account. Refresh the timeline before trying again.'); return; }
       } catch {
         setNotice('Could not reach the cloud service. The entry was not deleted. Check your connection and retry.');
         return;
@@ -156,6 +158,7 @@ export default function Home() {
 
   async function handleCompose(event: FormEvent) {
     event.preventDefault();
+    if (composeInFlight.current) return;
     const input = { recipient, subject, body, timeline_at: timelineAt };
     const validation = validateCompose(input);
     if (!validation.valid) { setNotice(Object.values(validation.errors)[0]); return; }
@@ -176,21 +179,28 @@ export default function Home() {
       setAuthOpen(true);
       return;
     } else {
+      composeInFlight.current = true;
       setLoading(true);
       try {
         if (editingId) {
           const { data, error } = await supabase!.from('messages').update({ recipient: entry.recipient, subject: entry.subject, body: entry.body, timeline_at: entry.timeline_at, status: entry.status }).eq('id', editingId).eq('user_id', user!.id).select().single();
-          if (error) { setNotice(`Update failed: ${error.message}`); return; }
+          if (error) {
+            setNotice(error.code === 'PGRST116' ? 'This entry no longer exists or is not accessible to this account. Refresh the timeline before editing again.' : `Update failed: ${error.message}`);
+            return;
+          }
+          if (!data) { setNotice('The cloud service did not return the updated entry. Your changes may not be visible yet; refresh before retrying.'); return; }
           setMessages(current => current.map(message => message.id === editingId ? data as Message : message));
         } else {
           const { data, error } = await supabase!.from('messages').insert({ user_id: user!.id, sender: user!.email ?? 'You', recipient: entry.recipient, subject: entry.subject, body: entry.body, timeline_at: entry.timeline_at, status: entry.status }).select().single();
           if (error) { setNotice(`Save failed: ${error.message}`); return; }
+          if (!data) { setNotice('The cloud service did not confirm the saved entry. Refresh your timeline before trying again.'); return; }
           setMessages(current => [data as Message, ...current]);
         }
       } catch {
         setNotice('Could not reach the cloud service. Your changes were not saved. Check your connection and retry.');
         return;
       } finally {
+        composeInFlight.current = false;
         setLoading(false);
       }
       setNotice(saveAsDraft ? 'Draft saved to your private cloud account.' : 'Timeline entry saved to your private cloud account.');
@@ -233,7 +243,7 @@ export default function Home() {
 
     {selected && !composeOpen && <div className="detail-backdrop" onClick={() => setSelected(null)}><section className="detail-panel" onClick={e => e.stopPropagation()}><div className="drawer-head"><span>MESSAGE DETAIL</span><button className="icon-button" onClick={() => setSelected(null)} aria-label="Close message"><X size={17}/></button></div><div className="detail-date"><CalendarClock size={17}/>{formatTimelineDate(selected.timeline_at)}</div>{selected.created_at && <div className="detail-date"><Clock3 size={17}/>Recorded in app {formatTimelineDate(selected.created_at)}</div>}<h2>{selected.subject}</h2><div className="detail-address"><span>FROM</span><strong>{selected.sender}</strong><span>TO</span><strong>{selected.recipient}</strong></div><div className="detail-body">{selected.body}</div><div className="detail-disclaimer"><ShieldCheck size={16}/><span>This entry is positioned by its selected timeline date. It does not indicate that an email was delivered on that date.</span></div><div className="detail-actions"><button className="sort-button" onClick={() => startEditing(selected)}><Pencil size={14}/> Edit entry</button><button className="sort-button" onClick={() => setDeleteTarget(selected)}><Trash2 size={14}/> Delete</button></div></section></div>}
 
-    {composeOpen && <div className="modal-backdrop" onClick={() => setComposeOpen(false)}><section className="compose-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">{editingId ? 'EDIT TIMELINE ENTRY' : 'CREATE A TIMELINE ENTRY'}</span><h2>{editingId ? 'Edit message' : 'Compose message'}</h2></div><button className="icon-button" onClick={() => setComposeOpen(false)} aria-label="Close composer"><X size={18}/></button></div><form onSubmit={handleCompose} className="compose-form"><label>To <input type="email" required value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="person@example.com"/></label><label>Subject <input required maxLength={250} value={subject} onChange={e => setSubject(e.target.value)} placeholder="Give this moment a subject"/></label><label className="date-field">TIMELINE DATE & TIME <span><CalendarClock size={15}/> <input type="datetime-local" required value={timelineAt} onChange={e => setTimelineAt(e.target.value)}/></span></label><textarea required maxLength={100000} value={body} onChange={e => setBody(e.target.value)} placeholder="Write a message to be found in another time…" rows={7}/><div className="composer-foot"><label className="draft-toggle"><input type="checkbox" checked={saveAsDraft} onChange={e => setSaveAsDraft(e.target.checked)}/> Save as draft</label><span className="date-note"><ShieldCheck size={14}/> Timeline date ≠ sent date</span><button className="primary-button" type="submit"><Send size={15}/>{editingId ? (saveAsDraft ? 'Update draft' : 'Update entry') : (saveAsDraft ? 'Save draft' : 'Save entry')}</button></div></form></section></div>}
+    {composeOpen && <div className="modal-backdrop" onClick={() => setComposeOpen(false)}><section className="compose-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">{editingId ? 'EDIT TIMELINE ENTRY' : 'CREATE A TIMELINE ENTRY'}</span><h2>{editingId ? 'Edit message' : 'Compose message'}</h2></div><button className="icon-button" onClick={() => setComposeOpen(false)} aria-label="Close composer"><X size={18}/></button></div><form onSubmit={handleCompose} className="compose-form"><label>To <input type="email" required value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="person@example.com"/></label><label>Subject <input required maxLength={250} value={subject} onChange={e => setSubject(e.target.value)} placeholder="Give this moment a subject"/></label><label className="date-field">TIMELINE DATE & TIME <span><CalendarClock size={15}/> <input type="datetime-local" required value={timelineAt} onChange={e => setTimelineAt(e.target.value)}/></span></label><textarea required maxLength={100000} value={body} onChange={e => setBody(e.target.value)} placeholder="Write a message to be found in another time…" rows={7}/><div className="composer-foot"><label className="draft-toggle"><input type="checkbox" checked={saveAsDraft} onChange={e => setSaveAsDraft(e.target.checked)}/> Save as draft</label><span className="date-note"><ShieldCheck size={14}/> Timeline date ≠ sent date</span><button className="primary-button" type="submit" disabled={loading || composeInFlight.current}><Send size={15}/>{loading ? 'Saving…' : editingId ? (saveAsDraft ? 'Update draft' : 'Update entry') : (saveAsDraft ? 'Save draft' : 'Save entry')}</button></div></form></section></div>}
 
     {deleteTarget && <div className="modal-backdrop" onClick={() => setDeleteTarget(null)}><section className="auth-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">PERMANENT ACTION</span><h2>Delete this entry?</h2></div><button className="icon-button" onClick={() => setDeleteTarget(null)} aria-label="Cancel deletion"><X size={18}/></button></div><p className="auth-copy">This removes “{deleteTarget.subject}” from your timeline. This action cannot be undone.</p><div className="composer-foot"><button className="sort-button" onClick={() => setDeleteTarget(null)}>Cancel</button><button className="primary-button" disabled={loading} onClick={() => void deleteMessage(deleteTarget)}><Trash2 size={15}/>{loading ? 'Deleting…' : 'Delete entry'}</button></div></section></div>}
 
