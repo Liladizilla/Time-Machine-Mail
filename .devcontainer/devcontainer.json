@@ -1,0 +1,13 @@
+{
+  "name": "Time Machine Mail",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Time Machine Mail preview",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "npm ci --no-audit --no-fund",
+  "postAttachCommand": "bash .devcontainer/start-preview.sh"
+}

@@ -17,20 +17,30 @@ A web app prototype for arranging personal message entries by a chosen historica
 
 The app displays fictional sample messages when Supabase is not configured so the interface is inspectable. Preview entries are only in browser memory and are not cloud-saved. A configured account is required for persistent, private messages.
 
-## Run locally
+## Preview without Vercel
 
-Requirements: Node.js 22 recommended and a Supabase project.
+### Browser preview in GitHub Codespaces
+
+The repository includes a devcontainer that installs dependencies and starts the Next.js development server when the Codespace opens. GitHub forwards port `3000` and opens the browser preview automatically. Supabase is optional for UI preview; without credentials, the app uses fictional in-memory sample entries.
+
+1. Open the [repository](https://github.com/Liladizilla/Time-Machine-Mail).
+2. Select **Code → Codespaces → Create codespace on main**.
+3. Wait for setup to finish. If the preview does not open automatically, open the **Ports** panel and visit port `3000`.
+
+Codespaces availability and included usage depend on your GitHub account. Do not add secrets to the repository to make preview mode work.
+
+### Run on your own computer
+
+Requirements: Node.js 22 recommended. Supabase is optional for inspecting the interface and required for account-backed persistence.
 
 ```bash
-npm install
-cp .env.example .env.local
-# Edit .env.local with your Supabase project URL and public anon/publishable key
+npm ci
 npm test
 npm run lint
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000`. To test real accounts and saved records, configure the Supabase variables described below in `.env.local`.
 
 ## Supabase setup
 
@@ -55,7 +65,7 @@ The SQL RLS policies are included in the migration but still require integration
 - Drafts are stored as entries with status `draft`; the drafts folder is available, but drafts are not sent as email.
 - Preview entries are fictional and are not persisted.
 - Google Fonts are optional; system font fallbacks are defined.
-- End-to-end browser tests remain to be added before a production release.
+- Browser-level end-to-end tests remain to be added before a production release.
 - Password recovery requires the `/reset-password` redirect to be allowed in Supabase Auth URL Configuration and has not yet been verified against a live project.
 
 ## Roadmap
