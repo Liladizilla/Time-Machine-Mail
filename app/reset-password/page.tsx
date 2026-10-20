@@ -37,11 +37,16 @@ export default function ResetPasswordPage() {
     event.preventDefault();
     if (!supabase || !password || password.length < 8 || password !== confirmation) return;
     setSaving(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setSaving(false);
-    if (error) { setNotice(error.message); return; }
-    setNotice('Password updated. Returning to your timeline…');
-    window.setTimeout(() => router.replace('/'), 900);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) { setNotice(error.message); return; }
+      setNotice('Password updated. Returning to your timeline…');
+      window.setTimeout(() => router.replace('/'), 900);
+    } catch {
+      setNotice('Could not update your password because the account service could not be reached. Check your connection and try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return <main className="reset-shell"><section className="reset-card"><span className="eyebrow">TIME MACHINE MAIL / ACCOUNT SECURITY</span><h1>Choose a new <em>password.</em></h1><p className="reset-copy">{notice}</p>{ready && supabaseConfigured && <form onSubmit={updatePassword} className="compose-form"><label>New password <input type="password" minLength={8} autoComplete="new-password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters"/></label><label>Confirm new password <input type="password" minLength={8} autoComplete="new-password" required value={confirmation} onChange={e => setConfirmation(e.target.value)} placeholder="Enter it again"/></label>{confirmation && password !== confirmation && <p className="reset-error">Passwords do not match.</p>}<button className="primary-button auth-submit" type="submit" disabled={saving || password.length < 8 || password !== confirmation}>{saving ? 'Updating…' : 'Update password'}</button></form>}<Link className="reset-back" href="/">Return to Time Machine Mail</Link></section></main>;

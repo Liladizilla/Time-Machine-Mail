@@ -55,14 +55,14 @@ The SQL RLS policies are included in the migration but still require integration
 - Drafts are stored as entries with status `draft`; the drafts folder is available, but drafts are not sent as email.
 - Preview entries are fictional and are not persisted.
 - Google Fonts are optional; system font fallbacks are defined.
-- A dependency lockfile and end-to-end browser tests remain to be added before a production release.
+- End-to-end browser tests remain to be added before a production release.
 - Password recovery requires the `/reset-password` redirect to be allowed in Supabase Auth URL Configuration and has not yet been verified against a live project.
 
 ## Roadmap
 
-1. Finish auth/session and database integration tests against Supabase.
-2. Add pagination and server-backed search for large timelines.
-3. Add end-to-end tests for sign-in, password recovery, private records, and composing historical entries.
+1. Add end-to-end tests for sign-in, password recovery, private records, and composing historical entries.
+2. Verify auth/session and database isolation against a live Supabase project.
+3. Add pagination and server-backed search for large timelines.
 4. If real email sending is added, keep actual provider timestamps separate from user-selected timeline dates and clearly disclose the distinction.
 
 See [SECURITY.md](SECURITY.md) for the security policy.
