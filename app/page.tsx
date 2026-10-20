@@ -54,8 +54,13 @@ export default function Home() {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => {
+    let active = true;
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (!active) return;
+      if (error) { setNotice(`Could not restore your account session: ${error.message}`); return; }
       if (data.user) { const next = { id: data.user.id, email: data.user.email }; setUser(next); }
+    }).catch(() => {
+      if (active) setNotice('Could not reach the account service while restoring your session. Check your connection.');
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const next = session?.user ? { id: session.user.id, email: session.user.email } : null;
@@ -63,7 +68,7 @@ export default function Home() {
       if (next) { setNotice(`Signed in as ${next.email ?? 'your account'}`); }
       else { setMessages(sampleMessages); setNotice('Signed out · preview timeline shown'); }
     });
-    return () => listener.subscription.unsubscribe();
+    return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => { if (user) void refreshMessages(user); }, [user, sort]);
@@ -155,7 +160,7 @@ export default function Home() {
     const validation = validateCompose(input);
     if (!validation.valid) { setNotice(Object.values(validation.errors)[0]); return; }
     const entry: Message = { id: `local-${Date.now()}`, sender: user?.email ?? 'You', recipient: recipient.trim(), subject: subject.trim(), body: body.trim(), timeline_at: new Date(timelineAt).toISOString(), status: saveAsDraft ? 'draft' : 'timeline_entry' };
-    const cloudWrite = Boolean((editingId || !editingId) && user && supabase);
+    const cloudWrite = Boolean(user && supabase);
     if ((editingId || !editingId) && supabaseConfigured && !user) {
       setNotice(editingId ? 'Sign in before updating a cloud timeline entry.' : 'Sign in before saving to your private cloud timeline.');
       setAuthOpen(true);
