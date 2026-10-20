@@ -34,7 +34,8 @@
     "electron": "^44.9.1",
     "electron-builder": "^26.15.3",
     "concurrently": "^9.2.1",
-    "wait-on": "^8.0.4"
+    "wait-on": "^8.0.4",
+    "eslint-plugin-react-hooks": "^5.2.0"
   },
   "main": "electron/main.mjs",
   "build": {
