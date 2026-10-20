@@ -6,3 +6,6 @@ out/
 .env.*.local
 *.tsbuildinfo
 .DS_Store
+
+# Desktop installer output
+release/

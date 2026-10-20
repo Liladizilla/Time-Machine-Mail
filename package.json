@@ -3,7 +3,107 @@
   "version": "0.1.0",
   "private": true,
   "description": "A chronological email workspace for messages anchored to chosen dates.",
-  "scripts": {"dev":"next dev","build":"next build","start":"next start","lint":"eslint .","test":"node --test"},
-  "dependencies": {"@supabase/ssr":"^0.7.0","@supabase/supabase-js":"^2.57.0","lucide-react":"^0.468.0","next":"^15.5.0","react":"^19.1.0","react-dom":"^19.1.0"},
-  "devDependencies": {"@eslint/eslintrc":"^3.3.0","@types/node":"^22.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","eslint":"^9.0.0","eslint-config-next":"^15.5.0","typescript":"^5.8.0"}
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "node --test",
+    "desktop:dev": "concurrently -k -s first \"npm:dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
+    "desktop:dist": "npm run build && electron-builder --linux AppImage deb",
+    "desktop:dist:win": "npm run build && electron-builder --win nsis",
+    "desktop:dist:mac": "npm run build && electron-builder --mac dmg"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.57.0",
+    "lucide-react": "^0.468.0",
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^15.5.0",
+    "typescript": "^5.8.0",
+    "electron": "^44.9.1",
+    "electron-builder": "^26.15.3",
+    "concurrently": "^9.2.1",
+    "wait-on": "^8.0.4"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "dev.timemachinemail.desktop",
+    "productName": "Time Machine Mail",
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "!node_modules/**"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "app",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": ".next/static",
+        "to": "app/.next/static",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "public",
+        "to": "app/public",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "build/icons/icon.png",
+        "to": "icons/icon.png"
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "icon": "build/icons/icon.png",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icons/icon.png",
+      "artifactName": "${productName}-${version}-${arch}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "build/icons/icon.png",
+      "category": "public.app-category.productivity",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  }
 }

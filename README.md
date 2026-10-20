@@ -42,6 +42,44 @@ npm run dev
 
 Open `http://localhost:3000`. To test real accounts and saved records, configure the Supabase variables described below in `.env.local`.
 
+## Desktop app (Electron)
+
+Time Machine Mail can run as a standalone desktop application. Electron opens a native window and starts the bundled Next.js standalone server locally; it does not depend on a Vercel deployment. The same UI and Supabase client are used in browser and desktop builds.
+
+### Run the desktop app in development
+
+Requirements: Node.js 22.12 or newer.
+
+```bash
+npm ci
+npm run desktop:dev
+```
+
+This starts the Next.js development server and opens the Electron window. Stop it with `Ctrl+C`.
+
+### Build an installer
+
+Build installers on the matching operating system, or use the **Desktop installers** GitHub Actions workflow to build for Linux, Windows, and macOS in hosted runners.
+
+```bash
+npm run desktop:dist       # Linux: AppImage and .deb
+npm run desktop:dist:win   # Windows: NSIS installer
+npm run desktop:dist:mac   # macOS: .dmg
+```
+
+Build output is written to `release/`. Linux packages target x64 by default. Cross-platform installer jobs run from GitHub Actions; they do not require Vercel. Installer artifacts are attached to tagged desktop releases when a `desktop-v*` tag is pushed.
+
+For desktop account sign-in and password recovery, add `http://127.0.0.1:43127/**` to Supabase Auth's allowed redirect URLs. The installed app reads optional runtime settings from `config.json` in its Electron user-data directory (on Linux this is normally `~/.config/time-machine-mail/config.json`; Windows and macOS use their standard app-data directories):
+
+```json
+{
+  "supabaseUrl": "https://YOUR_PROJECT.supabase.co",
+  "supabaseAnonKey": "YOUR_PUBLIC_ANON_KEY"
+}
+```
+
+Restart the app after editing this file. The installer does not contain CI placeholder credentials. Only use the public anon/publishable key, never a Supabase service-role key.
+
 ## Supabase setup
 
 1. Create a project in [Supabase](https://supabase.com/).
