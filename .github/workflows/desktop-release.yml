@@ -41,6 +41,17 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build installer
         run: ${{ matrix.command }}
+      - name: Verify packaged Linux runtime
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          appimage="$(find release -maxdepth 1 -name '*.AppImage' -print -quit)"
+          test -n "$appimage"
+          chmod +x "$appimage"
+          "$appimage" --appimage-extract >/dev/null
+          test -f squashfs-root/resources/app/server.js
+          test -f squashfs-root/resources/app/node_modules/next/package.json
+          node -e "require.resolve('next', { paths: [require('path').resolve('squashfs-root/resources/app')] }); console.log('Packaged Next.js runtime resolves successfully')"
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
