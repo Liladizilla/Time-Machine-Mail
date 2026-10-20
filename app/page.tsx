@@ -38,6 +38,7 @@ export default function Home() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
   const composeInFlight = useRef(false);
+  const authInFlight = useRef(false);
 
   async function refreshMessages(currentUser = user) {
     if (!supabase || !currentUser) return;
@@ -117,7 +118,9 @@ export default function Home() {
 
   async function handleAuth(event: FormEvent) {
     event.preventDefault();
+    if (authInFlight.current) return;
     if (!supabase) { setNotice('Add Supabase credentials to .env.local to enable accounts.'); return; }
+    authInFlight.current = true;
     setLoading(true);
     try {
       if (authMode === 'reset') {
@@ -136,6 +139,7 @@ export default function Home() {
     } catch {
       setNotice('Could not reach the account service. Check your connection and try again.');
     } finally {
+      authInFlight.current = false;
       setLoading(false);
     }
   }

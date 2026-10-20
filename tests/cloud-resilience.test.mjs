@@ -50,3 +50,14 @@ test('cloud updates and deletes report entries that no longer exist', () => {
   assert.match(page, /delete\(\)\.eq\('id', message\.id\)\.eq\('user_id', user\.id\)\.select\('id'\)/);
   assert.match(page, /if \(!data\?\.length\) \{ setNotice\('This entry no longer exists or is not accessible/);
 });
+
+test('authentication submissions are guarded against rapid duplicate requests', () => {
+  const start = page.indexOf('async function handleAuth');
+  const end = page.indexOf('\n\n  async function signOut', start);
+  const auth = page.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'handleAuth handler exists');
+  assert.match(auth, /if \(authInFlight\.current\) return;/);
+  assert.match(auth, /authInFlight\.current = true;[\s\S]*?setLoading\(true\)/);
+  assert.match(auth, /finally \{[\s\S]*?authInFlight\.current = false;[\s\S]*?setLoading\(false\)/);
+  assert.match(page, /type=\"submit\" disabled=\{loading\}[\s\S]*?auth-submit/);
+});
