@@ -59,5 +59,5 @@ test('authentication submissions are guarded against rapid duplicate requests', 
   assert.match(auth, /if \(authInFlight\.current\) return;/);
   assert.match(auth, /authInFlight\.current = true;[\s\S]*?setLoading\(true\)/);
   assert.match(auth, /finally \{[\s\S]*?authInFlight\.current = false;[\s\S]*?setLoading\(false\)/);
-  assert.match(page, /type=\"submit\" disabled=\{loading\}[\s\S]*?auth-submit/);
+  assert.match(page, /className=\"primary-button auth-submit\" type=\"submit\" disabled=\{loading\}/);
 });
