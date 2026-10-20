@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownUp, CalendarClock, ChevronDown, Clock3, FileText, Inbox, LogIn, LogOut, Pencil, Plus, Search, Send, Settings2, ShieldCheck, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDownUp, CalendarClock, ChevronDown, Clock3, FileText, Inbox, LogIn, LogOut, Pencil, Plus, RefreshCw, Search, Send, Settings2, ShieldCheck, Sparkles, Trash2, X } from 'lucide-react';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { formatTimelineDate, searchMessages, validateCompose } from '@/lib/timeline.mjs';
 
@@ -256,7 +256,7 @@ export default function Home() {
       <div className="content-wrap">
         <div className="page-heading"><div><div className="eyebrow"><Clock3 size={13}/> TIME MACHINE MAIL</div><h1>{folder === 'drafts' ? 'Drafts' : 'Timeline'}</h1><p>{folder === 'drafts' ? 'Messages you are still shaping.' : 'Your messages, arranged by the moment you choose.'}</p></div><button className="primary-button heading-compose" onClick={() => { setEditingId(null); setRecipient(''); setSubject(''); setBody(''); setSaveAsDraft(false); setComposeOpen(true); setSelected(null); }}><Plus size={17}/> Compose</button></div>
         <div className="notice-bar" role="status" aria-live="polite" aria-atomic="true"><span className="notice-icon"><ShieldCheck size={15}/></span><span>{notice}</span><button onClick={() => setNotice(user ? `Signed in as ${user.email}` : 'Preview data is temporary. Configure Supabase for private cloud storage.')} aria-label="Dismiss notice"><X size={14}/></button></div>
-        <div className="toolbar"><div className="toolbar-hint"><span className="toolbar-mark"/> {folder === 'drafts' ? 'YOUR WORK IN PROGRESS' : 'CHRONOLOGICAL VIEW'}</div><button className="sort-button" onClick={() => setSort(sort === 'newest' ? 'oldest' : 'newest')}><ArrowDownUp size={15}/>{sort === 'newest' ? 'Newest first' : 'Oldest first'}<ChevronDown size={14}/></button></div>
+        <div className="toolbar"><div className="toolbar-hint"><span className="toolbar-mark"/> {folder === 'drafts' ? 'YOUR WORK IN PROGRESS' : 'CHRONOLOGICAL VIEW'}</div><div className="toolbar-actions"><button className="sort-button" onClick={() => { if (user) void refreshMessages(user); else setNotice('Preview data is local to this session; there is no cloud connection to refresh.'); }} disabled={loading} aria-label="Refresh timeline"><RefreshCw size={15}/>{loading ? 'Refreshing…' : 'Refresh'}</button><button className="sort-button" onClick={() => setSort(sort === 'newest' ? 'oldest' : 'newest')}><ArrowDownUp size={15}/>{sort === 'newest' ? 'Newest first' : 'Oldest first'}<ChevronDown size={14}/></button></div></div>
         <div className="timeline-meta"><span>{visibleMessages.length} {visibleMessages.length === 1 ? (folder === 'drafts' ? 'DRAFT' : 'MESSAGE') : (folder === 'drafts' ? 'DRAFTS' : 'MESSAGES')}</span><span>{folder === 'drafts' ? 'UNSENT DRAFTS' : 'ORDERED BY TIMELINE DATE'} <span className="meta-divider">·</span> {loading ? 'SYNCING…' : 'READY'}</span></div>
         <div className="timeline-list">
           {visibleMessages.map((message, index) => <button key={message.id} className={`message-row ${selected?.id === message.id ? 'selected' : ''}`} onClick={() => { setSelected(message); setComposeOpen(false); }}>
