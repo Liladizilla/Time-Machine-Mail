@@ -83,12 +83,7 @@
       "category": "Office",
       "icon": "build/icons/icon.png",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "maintainer": "151440626+Liladizilla@users.noreply.github.com",
-      "desktop": {
-        "Name": "Time Machine Mail",
-        "Comment": "A chronological email workspace",
-        "Categories": "Office;Email;"
-      }
+      "maintainer": "151440626+Liladizilla@users.noreply.github.com"
     },
     "win": {
       "target": [

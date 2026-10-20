@@ -16,6 +16,7 @@ test('desktop scripts and standalone Next output are configured', () => {
   assert.ok(pkg.author.email);
   assert.match(pkg.scripts['desktop:dist'], /--publish never/);
   assert.ok(pkg.build.linux.maintainer);
+  assert.equal(pkg.build.linux.desktop, undefined, 'electron-builder 26 rejects linux.desktop metadata');
   assert.ok(pkg.build.extraResources.some((item) => item.from === '.next/standalone'));
   assert.match(read('next.config.ts'), /output:\s*'standalone'/);
 });
