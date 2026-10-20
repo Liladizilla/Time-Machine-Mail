@@ -10,9 +10,9 @@
     "lint": "eslint .",
     "test": "node --test",
     "desktop:dev": "concurrently -k -s first \"npm:dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
-    "desktop:dist": "npm run build && electron-builder --linux AppImage deb",
-    "desktop:dist:win": "npm run build && electron-builder --win nsis",
-    "desktop:dist:mac": "npm run build && electron-builder --mac dmg"
+    "desktop:dist": "npm run build && electron-builder --publish never --linux AppImage deb",
+    "desktop:dist:win": "npm run build && electron-builder --publish never --win nsis",
+    "desktop:dist:mac": "npm run build && electron-builder --publish never --mac dmg"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
@@ -82,7 +82,13 @@
       ],
       "category": "Office",
       "icon": "build/icons/icon.png",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "maintainer": "151440626+Liladizilla@users.noreply.github.com",
+      "desktop": {
+        "Name": "Time Machine Mail",
+        "Comment": "A chronological email workspace",
+        "Categories": "Office;Email;"
+      }
     },
     "win": {
       "target": [
@@ -105,5 +111,9 @@
       "category": "public.app-category.productivity",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     }
+  },
+  "author": {
+    "name": "Charis_Chara",
+    "email": "151440626+Liladizilla@users.noreply.github.com"
   }
 }

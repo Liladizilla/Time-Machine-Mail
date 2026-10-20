@@ -9,10 +9,13 @@ test('desktop scripts and standalone Next output are configured', () => {
   const pkg = JSON.parse(read('package.json'));
   assert.equal(pkg.main, 'electron/main.mjs');
   assert.match(pkg.scripts['desktop:dev'], /electron/);
-  assert.match(pkg.scripts['desktop:dist'], /electron-builder --linux AppImage deb/);
-  assert.match(pkg.scripts['desktop:dist:win'], /electron-builder --win nsis/);
-  assert.match(pkg.scripts['desktop:dist:mac'], /electron-builder --mac dmg/);
+  assert.match(pkg.scripts['desktop:dist'], /electron-builder --publish never --linux AppImage deb/);
+  assert.match(pkg.scripts['desktop:dist:win'], /electron-builder --publish never --win nsis/);
+  assert.match(pkg.scripts['desktop:dist:mac'], /electron-builder --publish never --mac dmg/);
   assert.equal(pkg.build.productName, 'Time Machine Mail');
+  assert.ok(pkg.author.email);
+  assert.match(pkg.scripts['desktop:dist'], /--publish never/);
+  assert.ok(pkg.build.linux.maintainer);
   assert.ok(pkg.build.extraResources.some((item) => item.from === '.next/standalone'));
   assert.match(read('next.config.ts'), /output:\s*'standalone'/);
 });
