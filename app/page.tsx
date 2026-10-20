@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownUp, CalendarClock, ChevronDown, Clock3, FileText, Inbox, LogIn, LogOut, Plus, Search, Send, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { ArrowDownUp, CalendarClock, ChevronDown, Clock3, FileText, Inbox, LogIn, LogOut, Pencil, Plus, Search, Send, Settings2, ShieldCheck, Sparkles, Trash2, X } from 'lucide-react';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { formatTimelineDate, searchMessages, validateCompose } from '@/lib/timeline.mjs';
 
@@ -35,6 +35,8 @@ export default function Home() {
   const [body, setBody] = useState('');
   const [timelineAt, setTimelineAt] = useState('1998-09-03T09:00');
   const [saveAsDraft, setSaveAsDraft] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
 
   async function refreshMessages(currentUser = user) {
     if (!supabase || !currentUser) return;
@@ -76,6 +78,25 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleShortcut);
   }, []);
 
+  function startEditing(message: Message) {
+    const date = new Date(message.timeline_at);
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    setEditingId(message.id); setRecipient(message.recipient); setSubject(message.subject); setBody(message.body);
+    setTimelineAt(localDate); setSaveAsDraft(message.status === 'draft'); setSelected(null); setComposeOpen(true);
+  }
+
+  async function deleteMessage(message: Message) {
+    if (supabaseConfigured && !user) { setNotice('Sign in before deleting a cloud timeline entry.'); setDeleteTarget(null); setAuthOpen(true); return; }
+    if (user && supabase) {
+      setLoading(true);
+      const { error } = await supabase.from('messages').delete().eq('id', message.id).eq('user_id', user.id);
+      setLoading(false);
+      if (error) { setNotice(`Delete failed: ${error.message}`); return; }
+    }
+    setMessages(current => current.filter(item => item.id !== message.id));
+    setSelected(null); setDeleteTarget(null); setNotice('Entry deleted.');
+  }
+
   async function handleAuth(event: FormEvent) {
     event.preventDefault();
     if (!supabase) { setNotice('Add Supabase credentials to .env.local to enable accounts.'); return; }
@@ -100,7 +121,15 @@ export default function Home() {
     const validation = validateCompose(input);
     if (!validation.valid) { setNotice(Object.values(validation.errors)[0]); return; }
     const entry: Message = { id: `local-${Date.now()}`, sender: user?.email ?? 'You', recipient: recipient.trim(), subject: subject.trim(), body: body.trim(), timeline_at: new Date(timelineAt).toISOString(), status: saveAsDraft ? 'draft' : 'timeline_entry' };
-    if (user && supabase) {
+    if (editingId && user && supabase) {
+      const { data, error } = await supabase.from('messages').update({ recipient: entry.recipient, subject: entry.subject, body: entry.body, timeline_at: entry.timeline_at, status: entry.status }).eq('id', editingId).eq('user_id', user.id).select().single();
+      if (error) { setNotice(`Update failed: ${error.message}`); return; }
+      setMessages(current => current.map(message => message.id === editingId ? data as Message : message));
+    } else if (editingId && !supabaseConfigured) {
+      setMessages(current => current.map(message => message.id === editingId ? { ...entry, id: editingId } : message));
+    } else if (editingId) {
+      setNotice('Sign in before updating a cloud timeline entry.'); setAuthOpen(true); return;
+    } else if (user && supabase) {
       const { data, error } = await supabase.from('messages').insert({ user_id: user.id, sender: user.email ?? 'You', recipient: entry.recipient, subject: entry.subject, body: entry.body, timeline_at: entry.timeline_at, status: entry.status }).select().single();
       if (error) { setNotice(`Save failed: ${error.message}`); return; }
       setMessages(current => [data as Message, ...current]);
@@ -113,7 +142,7 @@ export default function Home() {
     }
     if (user && supabase) setNotice(saveAsDraft ? 'Draft saved to your private cloud account.' : 'Timeline entry saved to your private cloud account.');
     setFolder(saveAsDraft ? 'drafts' : 'timeline');
-    setComposeOpen(false); setSelected(null); setRecipient(''); setSubject(''); setBody('');
+    setComposeOpen(false); setSelected(null); setEditingId(null); setRecipient(''); setSubject(''); setBody('');
   }
 
   return <main className="app-shell">
@@ -148,9 +177,11 @@ export default function Home() {
       </div>
     </section>
 
-    {selected && !composeOpen && <div className="detail-backdrop" onClick={() => setSelected(null)}><section className="detail-panel" onClick={e => e.stopPropagation()}><div className="drawer-head"><span>MESSAGE DETAIL</span><button className="icon-button" onClick={() => setSelected(null)} aria-label="Close message"><X size={17}/></button></div><div className="detail-date"><CalendarClock size={17}/>{formatTimelineDate(selected.timeline_at)}</div><h2>{selected.subject}</h2><div className="detail-address"><span>FROM</span><strong>{selected.sender}</strong><span>TO</span><strong>{selected.recipient}</strong></div><div className="detail-body">{selected.body}</div><div className="detail-disclaimer"><ShieldCheck size={16}/><span>This entry is positioned by its selected timeline date. It does not indicate that an email was delivered on that date.</span></div></section></div>}
+    {selected && !composeOpen && <div className="detail-backdrop" onClick={() => setSelected(null)}><section className="detail-panel" onClick={e => e.stopPropagation()}><div className="drawer-head"><span>MESSAGE DETAIL</span><button className="icon-button" onClick={() => setSelected(null)} aria-label="Close message"><X size={17}/></button></div><div className="detail-date"><CalendarClock size={17}/>{formatTimelineDate(selected.timeline_at)}</div><h2>{selected.subject}</h2><div className="detail-address"><span>FROM</span><strong>{selected.sender}</strong><span>TO</span><strong>{selected.recipient}</strong></div><div className="detail-body">{selected.body}</div><div className="detail-disclaimer"><ShieldCheck size={16}/><span>This entry is positioned by its selected timeline date. It does not indicate that an email was delivered on that date.</span></div><div className="detail-actions"><button className="sort-button" onClick={() => startEditing(selected)}><Pencil size={14}/> Edit entry</button><button className="sort-button" onClick={() => setDeleteTarget(selected)}><Trash2 size={14}/> Delete</button></div></section></div>}
 
-    {composeOpen && <div className="modal-backdrop" onClick={() => setComposeOpen(false)}><section className="compose-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">CREATE A TIMELINE ENTRY</span><h2>Compose message</h2></div><button className="icon-button" onClick={() => setComposeOpen(false)} aria-label="Close composer"><X size={18}/></button></div><form onSubmit={handleCompose} className="compose-form"><label>To <input type="email" required value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="person@example.com"/></label><label>Subject <input required maxLength={250} value={subject} onChange={e => setSubject(e.target.value)} placeholder="Give this moment a subject"/></label><label className="date-field">TIMELINE DATE & TIME <span><CalendarClock size={15}/> <input type="datetime-local" required value={timelineAt} onChange={e => setTimelineAt(e.target.value)}/></span></label><textarea required maxLength={100000} value={body} onChange={e => setBody(e.target.value)} placeholder="Write a message to be found in another time…" rows={7}/><div className="composer-foot"><label className="draft-toggle"><input type="checkbox" checked={saveAsDraft} onChange={e => setSaveAsDraft(e.target.checked)}/> Save as draft</label><span className="date-note"><ShieldCheck size={14}/> Timeline date ≠ sent date</span><button className="primary-button" type="submit"><Send size={15}/>{saveAsDraft ? 'Save draft' : 'Save entry'}</button></div></form></section></div>}
+    {composeOpen && <div className="modal-backdrop" onClick={() => setComposeOpen(false)}><section className="compose-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">{editingId ? 'EDIT TIMELINE ENTRY' : 'CREATE A TIMELINE ENTRY'}</span><h2>{editingId ? 'Edit message' : 'Compose message'}</h2></div><button className="icon-button" onClick={() => setComposeOpen(false)} aria-label="Close composer"><X size={18}/></button></div><form onSubmit={handleCompose} className="compose-form"><label>To <input type="email" required value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="person@example.com"/></label><label>Subject <input required maxLength={250} value={subject} onChange={e => setSubject(e.target.value)} placeholder="Give this moment a subject"/></label><label className="date-field">TIMELINE DATE & TIME <span><CalendarClock size={15}/> <input type="datetime-local" required value={timelineAt} onChange={e => setTimelineAt(e.target.value)}/></span></label><textarea required maxLength={100000} value={body} onChange={e => setBody(e.target.value)} placeholder="Write a message to be found in another time…" rows={7}/><div className="composer-foot"><label className="draft-toggle"><input type="checkbox" checked={saveAsDraft} onChange={e => setSaveAsDraft(e.target.checked)}/> Save as draft</label><span className="date-note"><ShieldCheck size={14}/> Timeline date ≠ sent date</span><button className="primary-button" type="submit"><Send size={15}/>{editingId ? (saveAsDraft ? 'Update draft' : 'Update entry') : (saveAsDraft ? 'Save draft' : 'Save entry')}</button></div></form></section></div>}
+
+    {deleteTarget && <div className="modal-backdrop" onClick={() => setDeleteTarget(null)}><section className="auth-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">PERMANENT ACTION</span><h2>Delete this entry?</h2></div><button className="icon-button" onClick={() => setDeleteTarget(null)} aria-label="Cancel deletion"><X size={18}/></button></div><p className="auth-copy">This removes “{deleteTarget.subject}” from your timeline. This action cannot be undone.</p><div className="composer-foot"><button className="sort-button" onClick={() => setDeleteTarget(null)}>Cancel</button><button className="primary-button" disabled={loading} onClick={() => void deleteMessage(deleteTarget)}><Trash2 size={15}/>{loading ? 'Deleting…' : 'Delete entry'}</button></div></section></div>}
 
     {authOpen && <div className="modal-backdrop" onClick={() => setAuthOpen(false)}><section className="auth-modal" onClick={e => e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">PRIVATE BY DESIGN</span><h2>{authMode === 'signin' ? 'Welcome back.' : 'Create your account.'}</h2></div><button className="icon-button" onClick={() => setAuthOpen(false)} aria-label="Close account dialog"><X size={18}/></button></div><p className="auth-copy">Your timeline belongs to you. Sign in to save and sync it securely.</p><form onSubmit={handleAuth} className="compose-form"><label>Email <input type="email" required autoComplete="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="you@example.com"/></label><label>Password <input type="password" minLength={8} required autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'} value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="At least 8 characters"/></label><button className="primary-button auth-submit" type="submit" disabled={loading}>{loading ? 'Please wait…' : authMode === 'signin' ? 'Sign in' : 'Create account'}</button></form><button className="auth-switch" onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')}>{authMode === 'signin' ? 'New here? Create an account' : 'Already have an account? Sign in'}</button>{!supabaseConfigured && <p className="setup-hint">Setup required: copy <code>.env.example</code> to <code>.env.local</code>, then add your Supabase project URL and public key.</p>}</section></div>}
   </main>;
