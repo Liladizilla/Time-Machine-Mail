@@ -71,7 +71,7 @@ export default function Home() {
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
-      if (event.key.toLowerCase() === 'n') { event.preventDefault(); setComposeOpen(true); setSelected(null); }
+      if (event.key.toLowerCase() === 'n') { event.preventDefault(); setEditingId(null); setRecipient(''); setSubject(''); setBody(''); setSaveAsDraft(false); setComposeOpen(true); setSelected(null); }
       if (event.key.toLowerCase() === 'k') { event.preventDefault(); searchInputRef.current?.focus(); }
     }
     window.addEventListener('keydown', handleShortcut);
@@ -148,7 +148,7 @@ export default function Home() {
   return <main className="app-shell">
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark"><Clock3 size={21}/></div><div><strong>time machine</strong><span>MAIL / 0.1</span></div></div>
-      <button className="compose-button" onClick={() => { setComposeOpen(true); setSelected(null); }}><Plus size={17}/> Compose <span>⌘ N</span></button>
+      <button className="compose-button" onClick={() => { setEditingId(null); setRecipient(''); setSubject(''); setBody(''); setSaveAsDraft(false); setComposeOpen(true); setSelected(null); }}><Plus size={17}/> Compose <span>⌘ N</span></button>
       <div className="nav-label">WORKSPACE</div>
       <button className={`nav-item ${folder === 'timeline' ? 'active' : ''}`} onClick={() => { setFolder('timeline'); setSelected(null); }}><Inbox size={17}/> Timeline <span className="nav-count">{messages.filter(message => message.status !== 'draft').length}</span></button>
       <button className={`nav-item ${folder === 'drafts' ? 'active' : ''}`} onClick={() => { setFolder('drafts'); setSelected(null); }}><FileText size={17}/> Drafts <span className="nav-count">{messages.filter(message => message.status === 'draft').length}</span></button>
@@ -160,7 +160,7 @@ export default function Home() {
     <section className="main-panel">
       <header className="topbar"><div className="breadcrumb">Workspace <span>/</span> <strong>{folder === 'drafts' ? 'Drafts' : 'Timeline'}</strong></div><div className="topbar-right"><span className="status-dot"/> {user ? 'CLOUD SYNC' : 'LOCAL PREVIEW'} <button className="icon-button" aria-label="Account settings" onClick={() => user ? setNotice('Account settings will be expanded in a later task.') : setAuthOpen(true)}><Settings2 size={17}/></button></div></header>
       <div className="content-wrap">
-        <div className="page-heading"><div><div className="eyebrow"><Sparkles size={13}/> YOUR INBOX, OUT OF ORDER</div><h1>Every message has <em>its moment.</em></h1><p>Place a note in the past. Find it exactly where you left it.</p></div><button className="primary-button" onClick={() => { setComposeOpen(true); setSelected(null); }}><Plus size={17}/> New message</button></div>
+        <div className="page-heading"><div><div className="eyebrow"><Sparkles size={13}/> YOUR INBOX, OUT OF ORDER</div><h1>Every message has <em>its moment.</em></h1><p>Place a note in the past. Find it exactly where you left it.</p></div><button className="primary-button" onClick={() => { setEditingId(null); setRecipient(''); setSubject(''); setBody(''); setSaveAsDraft(false); setComposeOpen(true); setSelected(null); }}><Plus size={17}/> New message</button></div>
         <div className="notice-bar"><span className="notice-icon"><ShieldCheck size={15}/></span><span>{notice}</span><button onClick={() => setNotice(user ? `Signed in as ${user.email}` : 'Preview data is temporary. Configure Supabase for private cloud storage.')} aria-label="Dismiss notice"><X size={14}/></button></div>
         <div className="toolbar"><label className="search-box"><Search size={17}/><input ref={searchInputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search subject, sender, recipient…"/><kbd>⌘ K</kbd></label><button className="sort-button" onClick={() => setSort(sort === 'newest' ? 'oldest' : 'newest')}><ArrowDownUp size={15}/>{sort === 'newest' ? 'Newest first' : 'Oldest first'}<ChevronDown size={14}/></button></div>
         <div className="timeline-meta"><span>{visibleMessages.length} {visibleMessages.length === 1 ? (folder === 'drafts' ? 'DRAFT' : 'MESSAGE') : (folder === 'drafts' ? 'DRAFTS' : 'MESSAGES')}</span><span>{folder === 'drafts' ? 'UNSENT DRAFTS' : 'ORDERED BY TIMELINE DATE'} <span className="meta-divider">·</span> {loading ? 'SYNCING…' : 'READY'}</span></div>
