@@ -41,10 +41,15 @@ export default function Home() {
   async function refreshMessages(currentUser = user) {
     if (!supabase || !currentUser) return;
     setLoading(true);
-    const { data, error } = await supabase.from('messages').select('*').eq('user_id', currentUser.id).order('timeline_at', { ascending: sort === 'oldest' });
-    setLoading(false);
-    if (error) { setNotice(`Could not load messages: ${error.message}`); return; }
-    setMessages((data ?? []) as Message[]);
+    try {
+      const { data, error } = await supabase.from('messages').select('*').eq('user_id', currentUser.id).order('timeline_at', { ascending: sort === 'oldest' });
+      if (error) { setNotice(`Could not load messages: ${error.message}`); return; }
+      setMessages((data ?? []) as Message[]);
+    } catch {
+      setNotice('Could not reach the cloud timeline. Check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -89,9 +94,15 @@ export default function Home() {
     if (supabaseConfigured && !user) { setNotice('Sign in before deleting a cloud timeline entry.'); setDeleteTarget(null); setAuthOpen(true); return; }
     if (user && supabase) {
       setLoading(true);
-      const { error } = await supabase.from('messages').delete().eq('id', message.id).eq('user_id', user.id);
-      setLoading(false);
-      if (error) { setNotice(`Delete failed: ${error.message}`); return; }
+      try {
+        const { error } = await supabase.from('messages').delete().eq('id', message.id).eq('user_id', user.id);
+        if (error) { setNotice(`Delete failed: ${error.message}`); return; }
+      } catch {
+        setNotice('Could not reach the cloud service. The entry was not deleted. Check your connection and retry.');
+        return;
+      } finally {
+        setLoading(false);
+      }
     }
     setMessages(current => current.filter(item => item.id !== message.id));
     setSelected(null); setDeleteTarget(null); setNotice('Entry deleted.');
@@ -123,7 +134,18 @@ export default function Home() {
   }
 
   async function signOut() {
-    if (supabase) await supabase.auth.signOut();
+    if (supabase) {
+      setLoading(true);
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) { setNotice(`Could not sign out: ${error.message}`); return; }
+      } catch {
+        setNotice('Could not reach the account service. You are still signed in.');
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
     setUser(null);
   }
 
@@ -133,26 +155,41 @@ export default function Home() {
     const validation = validateCompose(input);
     if (!validation.valid) { setNotice(Object.values(validation.errors)[0]); return; }
     const entry: Message = { id: `local-${Date.now()}`, sender: user?.email ?? 'You', recipient: recipient.trim(), subject: subject.trim(), body: body.trim(), timeline_at: new Date(timelineAt).toISOString(), status: saveAsDraft ? 'draft' : 'timeline_entry' };
-    if (editingId && user && supabase) {
-      const { data, error } = await supabase.from('messages').update({ recipient: entry.recipient, subject: entry.subject, body: entry.body, timeline_at: entry.timeline_at, status: entry.status }).eq('id', editingId).eq('user_id', user.id).select().single();
-      if (error) { setNotice(`Update failed: ${error.message}`); return; }
-      setMessages(current => current.map(message => message.id === editingId ? data as Message : message));
-    } else if (editingId && !supabaseConfigured) {
+    const cloudWrite = Boolean((editingId || !editingId) && user && supabase);
+    if ((editingId || !editingId) && supabaseConfigured && !user) {
+      setNotice(editingId ? 'Sign in before updating a cloud timeline entry.' : 'Sign in before saving to your private cloud timeline.');
+      setAuthOpen(true);
+      return;
+    }
+    if (editingId && !supabaseConfigured) {
       setMessages(current => current.map(message => message.id === editingId ? { ...entry, id: editingId } : message));
-    } else if (editingId) {
-      setNotice('Sign in before updating a cloud timeline entry.'); setAuthOpen(true); return;
-    } else if (user && supabase) {
-      const { data, error } = await supabase.from('messages').insert({ user_id: user.id, sender: user.email ?? 'You', recipient: entry.recipient, subject: entry.subject, body: entry.body, timeline_at: entry.timeline_at, status: entry.status }).select().single();
-      if (error) { setNotice(`Save failed: ${error.message}`); return; }
-      setMessages(current => [data as Message, ...current]);
-    } else if (!supabaseConfigured) {
+    } else if (!editingId && !supabaseConfigured) {
       setMessages(current => [entry, ...current]);
       setNotice('Saved in this preview session only. Connect Supabase for cloud persistence.');
-    } else {
+    } else if (!cloudWrite) {
       setNotice('Sign in before saving to your private cloud timeline.');
-      setAuthOpen(true); return;
+      setAuthOpen(true);
+      return;
+    } else {
+      setLoading(true);
+      try {
+        if (editingId) {
+          const { data, error } = await supabase!.from('messages').update({ recipient: entry.recipient, subject: entry.subject, body: entry.body, timeline_at: entry.timeline_at, status: entry.status }).eq('id', editingId).eq('user_id', user!.id).select().single();
+          if (error) { setNotice(`Update failed: ${error.message}`); return; }
+          setMessages(current => current.map(message => message.id === editingId ? data as Message : message));
+        } else {
+          const { data, error } = await supabase!.from('messages').insert({ user_id: user!.id, sender: user!.email ?? 'You', recipient: entry.recipient, subject: entry.subject, body: entry.body, timeline_at: entry.timeline_at, status: entry.status }).select().single();
+          if (error) { setNotice(`Save failed: ${error.message}`); return; }
+          setMessages(current => [data as Message, ...current]);
+        }
+      } catch {
+        setNotice('Could not reach the cloud service. Your changes were not saved. Check your connection and retry.');
+        return;
+      } finally {
+        setLoading(false);
+      }
+      setNotice(saveAsDraft ? 'Draft saved to your private cloud account.' : 'Timeline entry saved to your private cloud account.');
     }
-    if (user && supabase) setNotice(saveAsDraft ? 'Draft saved to your private cloud account.' : 'Timeline entry saved to your private cloud account.');
     setFolder(saveAsDraft ? 'drafts' : 'timeline');
     setComposeOpen(false); setSelected(null); setEditingId(null); setRecipient(''); setSubject(''); setBody('');
   }
