@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compareMessages, searchMessages, validateCompose, formatTimelineDate } from '../lib/timeline.mjs';
+import { compareMessages, searchMessages, validateCompose, formatTimelineDate, isValidTimelineDate } from '../lib/timeline.mjs';
 
 const messages = [
   { id: 'old', timeline_at: '1998-09-03T10:00:00.000Z', subject: 'A letter from the past', sender: 'Ada', recipient: 'you@example.com', body: 'archive note' },
@@ -48,4 +48,12 @@ test('sort comparator stays deterministic when an entry has an invalid date', ()
   const invalid = { id: 'bad', timeline_at: 'not-a-date' };
   assert.equal(compareMessages(invalid, messages[0]), 0);
   assert.equal(compareMessages(messages[0], invalid), 0);
+});
+
+test('calendar validation rejects impossible dates instead of normalizing them', () => {
+  assert.equal(isValidTimelineDate('2026-02-31T12:00'), false);
+  assert.equal(isValidTimelineDate('2025-02-29T12:00'), false);
+  assert.equal(isValidTimelineDate('2024-02-29T12:00'), true);
+  assert.equal(isValidTimelineDate('1998-09-03T09:00'), true);
+  assert.equal(isValidTimelineDate('not-a-date'), false);
 });
