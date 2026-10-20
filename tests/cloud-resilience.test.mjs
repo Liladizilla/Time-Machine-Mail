@@ -79,7 +79,7 @@ test('stale timeline responses cannot overwrite the active account or sort order
 test('status updates are announced and Escape closes the topmost open panel', () => {
   assert.match(page, /className=\"notice-bar\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"/);
   const start = page.indexOf('function handleShortcut');
-  const end = page.indexOf('window.addEventListener('keydown'', start);
+  const end = page.indexOf("window.addEventListener('keydown'", start);
   const shortcuts = page.slice(start, end);
   assert.match(shortcuts, /event\.key === 'Escape'/);
   assert.match(shortcuts, /if \(deleteTarget\) \{ setDeleteTarget\(null\); return; \}/);
