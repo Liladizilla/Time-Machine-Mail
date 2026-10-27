@@ -69,7 +69,7 @@ jobs:
           name: time-machine-mail-linux
           path: release
       - name: Publish Linux release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           token: ${{ secrets.RELEASE_TOKEN || github.token }}
           tag_name: desktop-v${{ steps.version.outputs.version }}
