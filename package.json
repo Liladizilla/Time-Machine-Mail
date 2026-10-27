@@ -32,7 +32,7 @@
     "eslint-config-next": "^15.5.0",
     "typescript": "^5.8.0",
     "electron": "^44.9.1",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^26.18.0",
     "concurrently": "^9.2.1",
     "wait-on": "^8.0.4",
     "eslint-plugin-react-hooks": "^5.2.0"
